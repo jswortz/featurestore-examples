@@ -36,14 +36,13 @@ client = bigquery.Client()
 
 
 def repeat_measure(n_iterations, n_predictions, n_workers, n_repeats=30):
-    cols = ['create_stats',
-        'n_features',
-        'n_predictions',
-        'n_workers',
-        'total_seconds']
-
-
-    data = pd.DataFrame([], columns=cols)
+    data = {'create_stats': [],
+            'n_features': [],
+            'n_predictions': [],
+            'n_workers': [],
+            'total_seconds': [],
+            'n_features': []
+           }
     stats = create_a_fs_run(n_iterations, n_predictions, n_workers)
     
     
@@ -63,9 +62,9 @@ def main():
     import pandas as pd
 
     design_data = build.lhs(
-        {'Nodes':[2,10],
-         'N_Rows':[1, 10],
-         'N_Iterations':[1,10],
+        {'Nodes':[2,8],
+         'N_Rows':[1, 6],
+         'N_Iterations':[1,7],
         }, num_samples=30)
 
     design_data = design_data[['Nodes', 'N_Rows', 'N_Iterations']].astype(int)
