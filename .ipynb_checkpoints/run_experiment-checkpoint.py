@@ -79,7 +79,7 @@ def main():
 
 
     data = pd.DataFrame([], columns=cols)
-
+    
     for index, row in design_data.iterrows():
         print(f"Testing for following row: \n{row}")
         repeat_run_data = repeat_measure(row['N_Iterations']
@@ -89,6 +89,7 @@ def main():
         data = data.append(append_frame, ignore_index=True)
         ts = datetime.now()
         data.to_csv(f'data/experiment-{ts}.csv')
+        time.sleep(120)
 
     #save to csv
     ts = datetime.now()

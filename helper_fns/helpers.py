@@ -247,14 +247,14 @@ def create_a_fs_run(n_iterations, n_predictions, n_workers):
 
     select_stmnt += f'FROM `{BQ_DATASET}.movie_view` LIMIT {n_predictions})'
     query_job = client.query(select_stmnt)
-    time.sleep(20) #prevent throttling
+    time.sleep(20*10) #prevent throttling
 
     create_lro = create_fs()
     print(create_lro.result())
     
     movies_entity_type_lro = create_entity_collection()
     print(movies_entity_type_lro.result())
-    time.sleep(30) #prevent throttling
+    time.sleep(30*10) #prevent throttling
     start_time = time.time()
     #update featurestore two itertions
     ingestion_lro = load_fs(n_iterations, n_workers=n_workers)
