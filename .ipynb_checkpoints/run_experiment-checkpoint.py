@@ -7,29 +7,18 @@ import json
 from google.cloud import bigquery
 import time
 from helper_fns.helpers import *
+from absl import app
+from absl import flags
+from absl import logging
 
 
-BUCKET = "matching-engine-demo-blog"
 
-#variables change to your liking
-BUCKET = "matching-engine-demo-blog"
-BQ_DATASET = 'movielens'
-PROJECT_ID = 'matching-engine-blog'
-API_ENDPOINT = "us-central1-aiplatform.googleapis.com"  # @param {type:"string"}
-FEATURESTORE_ID = "performance_testing"
-REGION = 'us-central1'
-
-n_iterations = 2
-n_predictions = 100
-n_workers = 1
-
-admin_client = FeaturestoreServiceClient(client_options={"api_endpoint": API_ENDPOINT})
-
-data_client = FeaturestoreOnlineServingServiceClient(
-    client_options={"api_endpoint": API_ENDPOINT}
-)
-
-BASE_RESOURCE_PATH = admin_client.common_location_path(PROJECT_ID, REGION)
+FLAGS = flags.FLAGS
+flags.DEFINE_integer("N_RUNS", 30, "Number of points to generate (latin sq space filling)")
+flags.DEFINE_integer("N_ITERATIONS", 4, "Number of group of 7 features")
+flags.DEFINE_integer("N_WORKERS", 1, "Number of workers")
+flags.DEFINE_integer("N_MEASURES", 30, "Number of repeat mesures per point")
+flags.DEFINE_integer("N_PREDICTIONS", 30, "Number of entities or predictions to return")
 
 #initialize bq client for building benchmark datasets for FS
 client = bigquery.Client()
@@ -57,15 +46,32 @@ def repeat_measure(n_iterations, n_predictions, n_workers, n_repeats=30):
     print(total_time)
     return data
 
-def main():
+
+def main(argv):
+    N_ITERATIONS = FLAGS.N_ITERATIONS
+    N_PREDICTIONS = FLAGS.N_PREDICTIONS
+    N_WORKERS = FLAGS.N_WORKERS
+    N_MEASURES = FLAGS.N_MEASURES
+    
+    logging.set_verbosity(logging.INFO)
+    
     from doepy import build
     import pandas as pd
+    
+    
+    admin_client = FeaturestoreServiceClient(client_options={"api_endpoint": FLAGS.API_ENDPOINT})
+
+    data_client = FeaturestoreOnlineServingServiceClient(
+        client_options={"api_endpoint": FLAGS.API_ENDPOINT}
+    )
+
+    BASE_RESOURCE_PATH = admin_client.common_location_path(FLAGS.PROJECT_ID, FLAGS.REGION)
 
     design_data = build.lhs(
-        {'Nodes':[2,10],
-         'N_Rows':[5, 100],
-         'N_Iterations':[2,12],
-        }, num_samples=100)
+        {'Nodes':[2,N_WORKERS],
+         'N_Rows':[5, N_PREDICTIONS],
+         'N_Iterations':[2,N_ITERATIONS],
+        }, num_samples=N_MEASURES)
 
     design_data = design_data[['Nodes', 'N_Rows', 'N_Iterations']].astype(int)
     
@@ -101,6 +107,6 @@ def main():
     
     
 if __name__ == '__main__':
-    main()
+    app.run(main)
 
 

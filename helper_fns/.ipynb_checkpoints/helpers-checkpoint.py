@@ -27,26 +27,22 @@ from google.cloud import bigquery
 import time
 
 
+from absl import app
+from absl import flags
+from absl import logging
 
-#variables change to your liking
-BUCKET = "matching-engine-demo-blog"
-BQ_DATASET = 'movielens'
-PROJECT_ID = 'matching-engine-blog'
-API_ENDPOINT = "us-central1-aiplatform.googleapis.com"  # @param {type:"string"}
-FEATURESTORE_ID = "performance_testing"
-REGION = 'us-central1'
 
-n_iterations = 2
 
-admin_client = FeaturestoreServiceClient(client_options={"api_endpoint": API_ENDPOINT})
+FLAGS = flags.FLAGS
+flags.DEFINE_string("BUCKET", 'matching-engine-demo-blog', "GCS Bucket to store the data")
+flags.DEFINE_string("BQ_DATASET", 'movielens', "GCS Bucket to store the model artifact")
+flags.DEFINE_string("PROJECT_ID", 'matching-engine-blog', "Project ID")
+flags.DEFINE_string("REGION", 'us-centra1', "GCP Region")
+flags.DEFINE_string("FEATURESTORE_ID", 'performance_testing', "Featurestore ID")
+flags.DEFINE_string("API_ENDPOINT", 'us-central1-aiplatform.googleapis.com', "API endpoint")
 
-data_client = FeaturestoreOnlineServingServiceClient(
-    client_options={"api_endpoint": API_ENDPOINT}
-)
 
-BASE_RESOURCE_PATH = admin_client.common_location_path(PROJECT_ID, REGION)
-
-#initialize bq client for building benchmark datasets for FS
+# #initialize bq client for building benchmark datasets for FS
 client = bigquery.Client()
 
 
@@ -132,10 +128,11 @@ def feature_store_spec(iteration):
     return feature_specs, requests
         
 def create_fs():
+    BASE_RESOURCE_PATH = admin_client.common_location_path(FLAGS.PROJECT_ID, FLAGS.REGION)
     create_lro = admin_client.create_featurestore(
     featurestore_service_pb2.CreateFeaturestoreRequest(
         parent=BASE_RESOURCE_PATH,
-        featurestore_id=FEATURESTORE_ID,
+        featurestore_id=FLAGS.FEATURESTORE_ID,
         featurestore=featurestore_pb2.Featurestore(
             online_serving_config=featurestore_pb2.Featurestore.OnlineServingConfig(
                 fixed_node_count=1
@@ -148,7 +145,7 @@ def create_fs():
 def create_entity_collection():
     movies_entity_type_lro = admin_client.create_entity_type(
     featurestore_service_pb2.CreateEntityTypeRequest(
-        parent=admin_client.featurestore_path(PROJECT_ID, REGION, FEATURESTORE_ID),
+        parent=admin_client.featurestore_path(FLAGS.PROJECT_ID, FLAGS.REGION, FLAGS.FEATURESTORE_ID),
         entity_type_id="movies",
         entity_type=entity_type_pb2.EntityType(description="Movies entity"),
         )
@@ -167,7 +164,7 @@ def load_fs(iterations, n_workers):
     
     # declare new features
     admin_client.batch_create_features(
-    parent=admin_client.entity_type_path(PROJECT_ID, REGION, FEATURESTORE_ID, "movies"),
+    parent=admin_client.entity_type_path(FLAGS.PROJECT_ID, FLAGS.REGION, FLAGS.FEATURESTORE_ID, "movies"),
     requests=requests_list
     ).result()
     
@@ -175,11 +172,11 @@ def load_fs(iterations, n_workers):
     
     import_movies_request = featurestore_service_pb2.ImportFeatureValuesRequest(
     entity_type=admin_client.entity_type_path(
-        PROJECT_ID, REGION, FEATURESTORE_ID, "movies"
+        FLAGS.PROJECT_ID, FLAGS.REGION, FLAGS.FEATURESTORE_ID, "movies"
     ),
     # Source
     bigquery_source=io_pb2.BigQuerySource(
-        input_uri=f"bq://{PROJECT_ID}.{BQ_DATASET}.movie_small"
+        input_uri=f"bq://{FLAGS.PROJECT_ID}.{FLAGS.BQ_DATASET}.movie_small"
     ),
     entity_id_field="movie_id",
     feature_specs=feature_specs_list,
@@ -193,12 +190,12 @@ def load_fs(iterations, n_workers):
 def delete_featurestore():
     admin_client.delete_featurestore(
     request=featurestore_service_pb2.DeleteFeaturestoreRequest(
-        name=admin_client.featurestore_path(PROJECT_ID, REGION, FEATURESTORE_ID),
+        name=admin_client.featurestore_path(FLAGS.PROJECT_ID, FLAGS.REGION, FLAGS.FEATURESTORE_ID),
         force=True,
         )
     ).result()
 
-    return print("Deleted featurestore '{}'.".format(FEATURESTORE_ID ))
+    return print("Deleted featurestore '{}'.".format(FLAGS.FEATURESTORE_ID ))
 
 def poll_loading_data(ingestion_lro):
     start_time = datetime.now()
@@ -228,7 +225,7 @@ def create_a_fs_run(n_iterations, n_predictions, n_workers):
     
     # create the table for features
     select_stmnt = 'DELETE TABLE movielens.movie_small; '
-    select_stmnt = (f'CREATE TABLE IF NOT EXISTS {BQ_DATASET}.movie_small as (SELECT movie_id, ')
+    select_stmnt = (f'CREATE TABLE IF NOT EXISTS {FLAGS.BQ_DATASET}.movie_small as (SELECT movie_id, ')
     selects = []
     for iteration in range(n_iterations):
         appending = f'''
@@ -245,7 +242,7 @@ def create_a_fs_run(n_iterations, n_predictions, n_workers):
 
     select_stmnt += ','.join(selects)
 
-    select_stmnt += f'FROM `{BQ_DATASET}.movie_view` LIMIT {n_predictions})'
+    select_stmnt += f'FROM `{FLAGS.BQ_DATASET}.movie_view` LIMIT {n_predictions})'
     query_job = client.query(select_stmnt)
     time.sleep(20*10) #prevent throttling
 
@@ -265,7 +262,7 @@ def create_a_fs_run(n_iterations, n_predictions, n_workers):
 
 
 def measure_fs(n_iterations, n_predictions):
-    query = f"SELECT movie_id FROM `matching-engine-blog.movielens.movie_small` ORDER BY num_votes_0 DESC LIMIT {n_predictions}"
+    query = f"SELECT movie_id FROM `{FLAGS.PROJECT_ID}.{FLAGS.BQ_DATASET}.movie_small` ORDER BY num_votes_0 DESC LIMIT {n_predictions}"
     query_job = client.query(query)
     top_movie_ids = query_job.result().to_dataframe()
     
@@ -295,7 +292,7 @@ def measure_fs(n_iterations, n_predictions):
         featurestore_online_service_pb2.StreamingReadFeatureValuesRequest(
             # Fetch from the following feature store/entity type
             entity_type=admin_client.entity_type_path(
-                PROJECT_ID, REGION, FEATURESTORE_ID, "movies"
+                FLAGS.PROJECT_ID, FLAGS.REGION, FLAGS.FEATURESTORE_ID, "movies"
             ),
             entity_ids=top_movie_ids['movie_id'],
             feature_selector=feature_selector,
