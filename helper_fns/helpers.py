@@ -210,7 +210,7 @@ def poll_loading_data(ingestion_lro):
         #mins+=1
         #time.sleep(60) # one minute
     runtime_mins = (datetime.now() - start_time)
-    return print(f"Ran for a total of {runtime_mins}") 
+    return 
     
     
 def create_a_fs_run(n_iterations, n_predictions, n_workers):

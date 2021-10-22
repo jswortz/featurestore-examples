@@ -62,10 +62,10 @@ def main():
     import pandas as pd
 
     design_data = build.lhs(
-        {'Nodes':[2,8],
-         'N_Rows':[1, 6],
-         'N_Iterations':[1,7],
-        }, num_samples=30)
+        {'Nodes':[2,10],
+         'N_Rows':[5, 100],
+         'N_Iterations':[2,12],
+        }, num_samples=100)
 
     design_data = design_data[['Nodes', 'N_Rows', 'N_Iterations']].astype(int)
     
@@ -81,15 +81,19 @@ def main():
     data = pd.DataFrame([], columns=cols)
     
     for index, row in design_data.iterrows():
-        print(f"Testing for following row: \n{row}")
-        repeat_run_data = repeat_measure(row['N_Iterations']
-                                         , row['N_Rows']
-                                         , row['Nodes'], n_repeats=30)
-        append_frame = pd.DataFrame(repeat_run_data, columns=cols)
-        data = data.append(append_frame, ignore_index=True)
-        ts = datetime.now()
-        data.to_csv(f'data/experiment-{ts}.csv')
-        time.sleep(120)
+        try:
+            print(f"Testing for following row: \n{row}")
+            repeat_run_data = repeat_measure(row['N_Iterations']
+                                             , row['N_Rows']
+                                             , row['Nodes'], n_repeats=300)
+            append_frame = pd.DataFrame(repeat_run_data, columns=cols)
+            data = data.append(append_frame, ignore_index=True)
+            ts = datetime.now()
+            data.to_csv(f'data/experiment-{ts}.csv')
+            time.sleep(120*2)
+        except:
+            time.sleep(120*2)
+            pass
 
     #save to csv
     ts = datetime.now()
