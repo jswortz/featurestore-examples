@@ -37,7 +37,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("BUCKET", 'matching-engine-demo-blog', "GCS Bucket to store the data")
 flags.DEFINE_string("BQ_DATASET", 'movielens', "GCS Bucket to store the model artifact")
 flags.DEFINE_string("PROJECT_ID", 'matching-engine-blog', "Project ID")
-flags.DEFINE_string("REGION", 'us-centra1', "GCP Region")
+flags.DEFINE_string("REGION", 'us-central1', "GCP Region")
 flags.DEFINE_string("FEATURESTORE_ID", 'performance_testing', "Featurestore ID")
 flags.DEFINE_string("API_ENDPOINT", 'us-central1-aiplatform.googleapis.com', "API endpoint")
 
@@ -128,6 +128,8 @@ def feature_store_spec(iteration):
     return feature_specs, requests
         
 def create_fs():
+    admin_client = FeaturestoreServiceClient(client_options={"api_endpoint": FLAGS.API_ENDPOINT})
+
     BASE_RESOURCE_PATH = admin_client.common_location_path(FLAGS.PROJECT_ID, FLAGS.REGION)
     create_lro = admin_client.create_featurestore(
     featurestore_service_pb2.CreateFeaturestoreRequest(
@@ -143,6 +145,7 @@ def create_fs():
     return create_lro
     
 def create_entity_collection():
+    admin_client = FeaturestoreServiceClient(client_options={"api_endpoint": FLAGS.API_ENDPOINT})
     movies_entity_type_lro = admin_client.create_entity_type(
     featurestore_service_pb2.CreateEntityTypeRequest(
         parent=admin_client.featurestore_path(FLAGS.PROJECT_ID, FLAGS.REGION, FLAGS.FEATURESTORE_ID),
@@ -154,6 +157,7 @@ def create_entity_collection():
 
 
 def load_fs(iterations, n_workers):
+    admin_client = FeaturestoreServiceClient(client_options={"api_endpoint": FLAGS.API_ENDPOINT})
     
     feature_specs_list = []
     requests_list = []
@@ -188,6 +192,7 @@ def load_fs(iterations, n_workers):
     return ingestion_lro
 
 def delete_featurestore():
+    admin_client = FeaturestoreServiceClient(client_options={"api_endpoint": FLAGS.API_ENDPOINT})
     admin_client.delete_featurestore(
     request=featurestore_service_pb2.DeleteFeaturestoreRequest(
         name=admin_client.featurestore_path(FLAGS.PROJECT_ID, FLAGS.REGION, FLAGS.FEATURESTORE_ID),
@@ -211,6 +216,8 @@ def poll_loading_data(ingestion_lro):
     
     
 def create_a_fs_run(n_iterations, n_predictions, n_workers):
+    
+    admin_client = FeaturestoreServiceClient(client_options={"api_endpoint": FLAGS.API_ENDPOINT})
     
     #delete FS and dataset if exists (try except)
     try:
@@ -244,14 +251,14 @@ def create_a_fs_run(n_iterations, n_predictions, n_workers):
 
     select_stmnt += f'FROM `{FLAGS.BQ_DATASET}.movie_view` LIMIT {n_predictions})'
     query_job = client.query(select_stmnt)
-    time.sleep(20*10) #prevent throttling
+    time.sleep(60) #prevent throttling
 
     create_lro = create_fs()
     print(create_lro.result())
     
     movies_entity_type_lro = create_entity_collection()
     print(movies_entity_type_lro.result())
-    time.sleep(30*10) #prevent throttling
+    time.sleep(60) #prevent throttling
     start_time = time.time()
     #update featurestore two itertions
     ingestion_lro = load_fs(n_iterations, n_workers=n_workers)
@@ -262,6 +269,7 @@ def create_a_fs_run(n_iterations, n_predictions, n_workers):
 
 
 def measure_fs(n_iterations, n_predictions):
+    admin_client = FeaturestoreServiceClient(client_options={"api_endpoint": FLAGS.API_ENDPOINT})
     query = f"SELECT movie_id FROM `{FLAGS.PROJECT_ID}.{FLAGS.BQ_DATASET}.movie_small` ORDER BY num_votes_0 DESC LIMIT {n_predictions}"
     query_job = client.query(query)
     top_movie_ids = query_job.result().to_dataframe()
@@ -285,7 +293,9 @@ def measure_fs(n_iterations, n_predictions):
     )
     
     n_features = len(ids)
-
+    data_client = FeaturestoreOnlineServingServiceClient(
+    client_options={"api_endpoint": FLAGS.API_ENDPOINT}
+)
     start_time = time.time()
 
     response_stream = data_client.streaming_read_feature_values(
