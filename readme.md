@@ -21,20 +21,22 @@ This (along with `Factorial-Design.ipynb`) tests featurestore's load and request
 
 Usage: for long running do a background process to run:
 
-`nohup python run_experiment.py --N_ITERATIONS <> --N_WORKERS <> `
- `--N_MEASURES <> --N_REPEAT_MEASURES --N_PREDICTIONS <> `
- `--PROJECT_ID <> --BUCKET <> `
- `--BQ_DATASET movielens --REGION <> --FEATURESTORE_ID <>`
+```
+nohup python run_experiment.py --N_ITERATIONS <> --N_WORKERS <> 
+ --N_MEASURES <> --N_REPEAT_MEASURES --N_PREDICTIONS <> 
+ --PROJECT_ID <> --BUCKET <> 
+ --BQ_DATASET movielens --REGION <> --FEATURESTORE_ID <> 
+ ```
  
  Data will be generated for each run in `data/` and will accumulate measurments
  
  Parameters:
  
-  - N_FEATURES: number of features, incremented in chunks of 7 varaibles
-  - N_PREDICTIONS: Number of rows to load and request
-  - N_WORKERS: Number of workers configured on the featurestore
-  - N_REPEAT_MEASURES: Number of times to execute latency measurments per config
-  - FEATURESTORE_ID: The name of the featurestore that will be recreated for the test
+  - `N_FEATURES`: number of features, incremented in chunks of 7 varaibles
+  - `N_PREDICTIONS`: Number of rows to load and request
+  - `N_WORKERS`: Number of workers configured on the featurestore
+  - `N_REPEAT_MEASURES`: Number of times to execute latency measurments per config
+  - `FEATURESTORE_ID`: The name of the featurestore that will be recreated for the test
 
 Outputs:
 
