@@ -46,15 +46,14 @@ Outputs:
 Review the analysis tab for:
 
 ## Anova
-
-![](figures/anova.png)
+<img src="figures/anova.png" alt="drawing" width="500"/>
 
 ## Response Analysis
 
-![](figures/latency_analysis.png)
+<img src="figures/latency_analysis.png" alt="drawing" width="800"/>
 
 ## Response Surface Visualiztion (median)
 
-![](figures/response-surface.png)
+<img src="figures/response-surface.png" alt="drawing" width="700"/>
 
 
