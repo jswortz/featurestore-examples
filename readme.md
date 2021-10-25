@@ -41,3 +41,20 @@ Outputs:
 - `FS Load From BQ`: Number of seconds it takes to load the FS with the specified features and rows
 - `total_seconds`: Response in seconds for specified request
 
+# DOE Analysis
+
+Review the analysis tab for:
+
+## Anova
+
+![](figures/anova.png)
+
+## Response Analysis
+
+![](figures/latency_analysis.png)
+
+## Response Surface Visualiztion (median)
+
+![](figures/response-surface.png)
+
+
